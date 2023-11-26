@@ -71,10 +71,12 @@ class DLL:
 
         """
         if self.foot is None:
-            self.head = Node(data[0], data[1]['title'], data[1]['artist'], data[1]['album'], data[1]['duration'], data[2])
+            self.head = Node(data[0], data[1]['title'], data[1]['artist'], data[1]['album'], data[1]['duration'],
+                             data[2])
             self.foot = self.head
         else:
-            new_node: Node = Node(data[0], data[1]['title'], data[1]['artist'], data[1]['album'], data[1]['duration'], data[2])
+            new_node: Node = Node(data[0], data[1]['title'], data[1]['artist'], data[1]['album'], data[1]['duration'],
+                                  data[2])
             self.foot.next = new_node
             new_node.prev = self.foot
             new_node.next = None
@@ -172,13 +174,12 @@ class DLL:
 
             return False
 
-    def display(self, order: str) -> list[tuple[str, dict, PIL.Image.Image]]:
+    def display(self, order: str = 'asc', **kwargs):
         """
             Muestra los elementos de la lista en orden ascendente o descendente.
 
             Args:
                 order (str): El tipo de ordenamiento a aplicar. Debe ser "asc" para ascendente o "desc" para descendente
-
             Returns:
                 Lista de tuplas con:
                 title (str): El título de la cancion.
@@ -193,6 +194,7 @@ class DLL:
                 Para mostrar la lista en orden descendente:\n
                 display("desc")
             """
+        wdata = kwargs.get('wdata', str)
         full_list: list[tuple[str, str, str, float, PIL.Image.Image]] = []
         if order == 'asc':
             current: Node = self.head
@@ -203,7 +205,14 @@ class DLL:
                     'album': current.album,
                     'duration': current.duration
                 }
-                full_list.append((current.path, data, current.image))
+                if wdata == 'str':
+                    full_list.append(current.path)
+                elif wdata == 'dict':
+                    full_list.append(data)
+                elif wdata == 'img':
+                    full_list.append(current.image)
+                else:
+                    full_list.append((current.path, data, current.image))
                 current = current.next
             return full_list
         elif order == 'desc':
@@ -215,7 +224,14 @@ class DLL:
                     'album': current.album,
                     'duration': current.duration
                 }
-                full_list.append((current.path, data, current.image))
+                if wdata == 'str':
+                    full_list.append(current.path)
+                elif wdata == 'dict':
+                    full_list.append(data)
+                elif wdata == 'img':
+                    full_list.append(current.image)
+                else:
+                    full_list.append((current.path, data, current.image))
                 current = current.prev
             return full_list
 
