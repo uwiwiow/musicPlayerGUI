@@ -182,7 +182,7 @@ def update_queue():
             # TODO no llame si esta vacio songs_var
             songs = [ast.literal_eval(song) for song in ast.literal_eval(songs_var.get())]
 
-            for it, song_data in enumerate(songs):  # TODO que una funcion haga esto
+            for it, song_data in enumerate(songs):
                 song_frame = ttk.Frame(sf_canciones)
                 number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14')
                 number.pack(side='left', padx=(20, 10))
