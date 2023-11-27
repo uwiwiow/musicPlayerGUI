@@ -56,15 +56,19 @@ def open_img(file_path):
 
 
 def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
+    if pause_var.get():
+        pause_song()
+        dll.pop()
     if pg.mixer_music.get_busy():
         dll.pop()
-        progress_var.set(0)
+    progress_var.set(0)
     dll.push(song_data)
     play()
 
 
-def is_playing(pause=False):
-    if not pg.mixer_music.get_busy() and not pause:
+def is_playing():
+    if not pg.mixer_music.get_busy() and not pause_var.get():
+        print(pause_var.get())
         progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
         dll.pop()
         if dll.get() is not None:
@@ -74,12 +78,12 @@ def is_playing(pause=False):
         progress_var.set(0)
         update_queue()
     else:
-        if pause_var.get():
-            pg.mixer_music.pause()
-            window.after(100, is_playing, True)
-        else:
+        if not pause_var.get():
             pg.mixer_music.unpause()
             progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
+            window.after(100, is_playing)
+        if pause_var.get():
+            pg.mixer_music.pause()
             window.after(100, is_playing)
 
 
@@ -296,8 +300,8 @@ song_data_frame.pack(side='left', padx=25)
 controls_frame = ttk.Frame(bottom_frame, height=80, width=600, name='controls')
 
 pause_var = ttk.BooleanVar()
-pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var, name='pause_button', bootstyle='dark-link')
-pause.pack()
+# pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var, name='pause_button', bootstyle='dark-link')
+# pause.pack()  TODO arreglar esto
 
 progress_bar = ttk.Progressbar(controls_frame, variable=progress_var, orient='horizontal', length=600, mode='determinate')
 progress_bar.pack(pady=10)
