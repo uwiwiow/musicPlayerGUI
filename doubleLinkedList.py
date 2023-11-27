@@ -195,42 +195,54 @@ class DLL:
                 display("desc")
             """
         wdata = kwargs.get('wdata', str)
-        full_list: list[tuple[str, str, str, float, PIL.Image.Image]] = []
+        full_list = []
         if order == 'asc':
             current: Node = self.head
             while current is not None:
-                data: dict = {
-                    'title': current.title,
-                    'artist': current.author,
-                    'album': current.album,
-                    'duration': current.duration
-                }
                 if wdata == 'str':
                     full_list.append(current.path)
                 elif wdata == 'dict':
+                    data: dict = {
+                        'title': current.title,
+                        'artist': current.author,
+                        'album': current.album,
+                        'duration': current.duration
+                    }
                     full_list.append(data)
                 elif wdata == 'img':
                     full_list.append(current.image)
                 else:
+                    data: dict = {
+                        'title': current.title,
+                        'artist': current.author,
+                        'album': current.album,
+                        'duration': current.duration
+                    }
                     full_list.append((current.path, data, current.image))
                 current = current.next
             return full_list
         elif order == 'desc':
             current: Node = self.foot
             while current is not None:
-                data: dict = {
-                    'title': current.title,
-                    'artist': current.author,
-                    'album': current.album,
-                    'duration': current.duration
-                }
                 if wdata == 'str':
                     full_list.append(current.path)
                 elif wdata == 'dict':
+                    data: dict = {
+                        'title': current.title,
+                        'artist': current.author,
+                        'album': current.album,
+                        'duration': current.duration
+                    }
                     full_list.append(data)
                 elif wdata == 'img':
                     full_list.append(current.image)
                 else:
+                    data: dict = {
+                        'title': current.title,
+                        'artist': current.author,
+                        'album': current.album,
+                        'duration': current.duration
+                    }
                     full_list.append((current.path, data, current.image))
                 current = current.prev
             return full_list
