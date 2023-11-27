@@ -6,15 +6,15 @@ from tinytag import TinyTag
 from PIL import Image, ImageTk
 
 
-class music:
-    def list_songs(self, music_directory="music\\") -> list[tuple[str, dict, Image.Image]]:
+class Music:
+    def list_songs(self, music_directory="Music\\") -> list[tuple[str, dict, Image.Image]]:
         """
-                Load song from the given folder
+        Load song from the given folder
 
-                :return:
-                    A list of tuples where each tuple consists of a string representing the full path of the song,
-                    a dictionary containing the song tags, and an image representing the album cover
-                """
+        :return:
+            A list of tuples where each tuple consists of a string representing the full path of the song,
+            a dictionary containing the song tags, and an image representing the album cover
+        """
         directory = music_directory
         hash_ = self.__hash_files(directory)
 
@@ -44,7 +44,12 @@ class music:
             with open('assets/music.pkl', 'wb') as f:
                 pickle.dump(data, f)
 
-            return music_list
+            images = []
+            for val in music_list:
+                images.append(self.__load_img(val[2]))
+            song_data = [(path, tags, loaded_img) for (path, tags, _), loaded_img in zip(music_list, images)]
+
+            return song_data
 
     def __hash_files(self, dir_):
         return hashlib.sha256("".join(

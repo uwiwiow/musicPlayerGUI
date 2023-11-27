@@ -1,14 +1,15 @@
 import ast
+import tkinter
+
 import PIL.Image
 import pygame as pg
 import multiprocessing
-from music import music
+from music import Music
 import ttkbootstrap as ttk
 from PIL import Image, ImageTk
 from doubleLinkedList import DLL
 from ttkbootstrap.constants import *
 from ttkbootstrap.scrolled import ScrolledFrame
-
 
 # window
 window = ttk.Window(themename='darkly')
@@ -20,7 +21,11 @@ window.iconbitmap('assets/icon.ico')
 # pg
 pg.mixer.init()
 # TODO arreglar el inicio si no hayun pickle
-music = music().list_songs()
+music = Music().list_songs()
+
+
+def reload_song_img():
+    print(1)
 
 
 def on_enter(event):
@@ -68,7 +73,8 @@ def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
 def play():
     song: tuple[str, dict, PIL.Image.Image] = dll.get()
     pg.mixer_music.load(song[0])
-    pg.mixer_music.play(1)
+    pg.mixer_music.play(1)  # TODO buscar algo que siempre se este actualizando que verifique si paso o esta reproduciendo la siguiente cancion
+    # TODO o sino en lugar de hacer pg.mixer_music.queue(song_data[0]) , no hacer queue y cada que verifique que se termino una cancion volver a llamar play()
     dll.pop()  # TODO al agregar a queue (funcion abajo) o hacer play hacer que se actualice el frame de queue
     songs_var.set(dll.display(wdata='dict'))
     update_queue()
@@ -98,7 +104,7 @@ hd = [40, 30, 10, 15]
 res: list[int] = hd if window.winfo_width() < 1880 else fhd
 
 # main frame with scroller
-sf = ScrolledFrame(window)
+sf = ScrolledFrame(window, name='main_sf')
 sf.hide_scrollbars()
 sf.pack(fill=BOTH, expand=YES)
 
@@ -107,44 +113,50 @@ dll = DLL()
 songs_var = ttk.StringVar()
 songs_var.set(dll.display(wdata='dict'))
 
-for i, v in enumerate(music):
-    frame = ttk.Frame(sf)  # individual frame for each song
+# quitar que sea def
+def display_body():
+    for i, v in enumerate(music):
+        frame = ttk.Frame(sf, name=f'song{i}')  # individual frame for each song
 
-    play_button_var = ttk.BooleanVar()
-    number = ttk.Button(frame, text=f'{i + 1}', width=3, image=None, bootstyle='default-link', name='play_button',
-                        command=lambda song_data=v: load_song(song_data))
-    number.pack(side='left', padx=(20, 10))
+        number = ttk.Button(frame, text=f'{i + 1}', width=3, image=None, bootstyle='default-link', name='play_button',
+                            command=lambda song_data=v: load_song(song_data))
+        number.pack(side='left', padx=(20, 10))
 
-    image_label = ttk.Label(frame, image=v[2])
-    image_label.pack(side='left', padx=10)
+        try:
+            image_label = ttk.Label(frame, image=v[2])
+        except tkinter.TclError:
+            image_label = ttk.Label(frame, image=None, name='image')
+        image_label.pack(side='left', padx=10)
+        print(image_label)
 
-    data_frame = ttk.Frame(frame, width=res[0])
-    title = ttk.Label(data_frame, text=f'{v[1]["title"]}', width=res[0], font='14')
-    title.pack()
-    autor = ttk.Label(data_frame, text=f'{v[1]["artist"]}', width=res[0], font='12', bootstyle='light')
-    autor.pack()
-    data_frame.pack(side='left', padx=15)
+        data_frame = ttk.Frame(frame, width=res[0])
+        title = ttk.Label(data_frame, text=f'{v[1]["title"]}', width=res[0], font='14')
+        title.pack()
+        autor = ttk.Label(data_frame, text=f'{v[1]["artist"]}', width=res[0], font='12', bootstyle='light')
+        autor.pack()
+        data_frame.pack(side='left', padx=15)
 
-    album = ttk.Label(frame, text=f'{v[1]["album"]}', width=res[1], font='14')
-    album.pack(side='left', padx=15)
+        album = ttk.Label(frame, text=f'{v[1]["album"]}', width=res[1], font='14')
+        album.pack(side='left', padx=15)
 
-    fecha = ttk.Label(frame, text=f'{v[1]["year"]}', width=res[2], font='14')
-    fecha.pack(side='left', padx=15)
+        fecha = ttk.Label(frame, text=f'{v[1]["year"]}', width=res[2], font='14')
+        fecha.pack(side='left', padx=15)
 
-    genero = ttk.Label(frame, text=f'{v[1]["genre"]}', width=res[3], font='14')
-    genero.pack(side='left', padx=15)
+        genero = ttk.Label(frame, text=f'{v[1]["genre"]}', width=res[3], font='14')
+        genero.pack(side='left', padx=15)
 
-    duration = ttk.Label(frame, text=f'{add(int(v[1]["duration"]) // 60)}:{add(int(v[1]["duration"]) % 60)}', width=10,
-                         font='14')
-    duration.pack(side='left', padx=15)
+        duration = ttk.Label(frame, text=f'{add(int(v[1]["duration"]) // 60)}:{add(int(v[1]["duration"]) % 60)}',
+                             width=10,
+                             font='14')
+        duration.pack(side='left', padx=15)
 
-    queue = ttk.Button(frame, width=3, image=add_queue_image, bootstyle='default-link', name='queue_button',
-                       command=lambda song_data=v: add_to_queue(song_data))
-    queue.pack(side='left', padx=15)
+        queue = ttk.Button(frame, width=3, image=add_queue_image, bootstyle='default-link', name='queue_button',
+                           command=lambda song_data=v: add_to_queue(song_data))
+        queue.pack(side='left', padx=15)
 
-    frame.pack(ipady=10, anchor='w', fill='x')
-    frame.bind("<Enter>", on_enter)
-    frame.bind("<Leave>", on_leave)
+        frame.pack(ipady=10, anchor='w', fill='x')
+        frame.bind("<Enter>", on_enter)
+        frame.bind("<Leave>", on_leave)
 
 
 def mostrar_lista_canciones():
@@ -156,7 +168,8 @@ def mostrar_lista_canciones():
     else:
         button_var.set(ttk.TRUE)
         # Crea un nuevo Frame para mostrar la lista de canciones
-        frame_canciones = ttk.Frame(window, padding=1, width=420, height=600, borderwidth=1, relief='solid', bootstyle='dark', name='float_frame')
+        frame_canciones = ttk.Frame(window, padding=1, width=420, height=600, borderwidth=1, relief='solid',
+                                    bootstyle='dark', name='float_frame')
         frame_canciones.propagate(0)
         frame_canciones.place(relx=1.0, rely=1.0, x=-20, y=-70, anchor="se")
 
@@ -167,6 +180,7 @@ def mostrar_lista_canciones():
         sf_canciones.pack(fill=BOTH, expand=YES)
 
         update_queue()
+
 
 def update_queue():
     for child in window.winfo_children():  # root
@@ -192,6 +206,7 @@ def update_queue():
                 song_frame.pack(ipady=20, anchor='w', fill='x')
 
 
+display_body()
 
 bottom_frame = ttk.Frame(window, bootstyle='dark', name='bottom_frame')
 bottom_frame.pack(side='bottom', fill='x')
