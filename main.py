@@ -1,8 +1,5 @@
-import ast
-import tkinter
 import PIL.Image
 import pygame as pg
-import multiprocessing
 from music import Music
 import ttkbootstrap as ttk
 from PIL import Image, ImageTk
@@ -61,20 +58,29 @@ def open_img(file_path):
 def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
     if pg.mixer_music.get_busy():
         dll.pop()
+        progress_var.set(0)
     dll.push(song_data)
     play()
 
 
-def is_playing():
-    if not pg.mixer_music.get_busy():
+def is_playing(pause=False):
+    if not pg.mixer_music.get_busy() and not pause:
+        progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
         dll.pop()
         if dll.get() is not None:
             time_var.set(time_var.get() - dll.get()[1]['duration'])
+            progress_var.set(0)
             play()
+        progress_var.set(0)
         update_queue()
     else:
-        window.after(100, is_playing)
-
+        if pause_var.get():
+            pg.mixer_music.pause()
+            window.after(100, is_playing, True)
+        else:
+            pg.mixer_music.unpause()
+            progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
+            window.after(100, is_playing)
 
 
 def play():
@@ -89,12 +95,14 @@ def play():
 
 
 def add_to_queue(song_data: tuple[str, dict, PIL.Image.Image]):
-    if (time_var.get() + song_data[1]['duration']) <= 900 or disable_time.get():  # check if total time in queue is less than 15 min or queue max time is disabled
+    # check if total time in queue is less than 15-min or queue max time is disabled
+    if (time_var.get() + song_data[1]['duration']) <= 900 or disable_time.get():
         time_var.set(time_var.get() + song_data[1]['duration'])  # add song duration for queue list
         dll.append(song_data)  # add song to node
         update_queue()  # updates queue frame
         if not pg.mixer_music.get_busy():  # plays music if there's no music already playing
-            time_var.set(time_var.get() - song_data[1]['duration'])  # reduces the time duration of the variable for the queue list
+            time_var.set(time_var.get() - song_data[1][
+                'duration'])  # reduces the time duration of the variable for the queue list
             play()
     else:
         time_limit()
@@ -104,6 +112,8 @@ def add_to_queue(song_data: tuple[str, dict, PIL.Image.Image]):
 play_image = open_img('assets/play.png')
 add_queue_image = open_img('assets/add_queue.png')
 queue_image = open_img('assets/queue.png')
+unpaused_image = open_img('assets/pause.png')
+paused_image = open_img('assets/unpause.png')
 
 # add 0 to one-digit numbers as str
 add = lambda x: '0' + str(x) if len(str(x)) == 1 else x
@@ -123,6 +133,7 @@ dll = DLL()
 # vars
 time_var = ttk.IntVar()
 disable_time = ttk.BooleanVar()
+progress_var = ttk.DoubleVar()
 
 for i, v in enumerate(music):
     frame = ttk.Frame(sf, name=f'song{i}')  # individual frame for each song
@@ -170,6 +181,7 @@ def disable_time_limit():
     else:
         disable_time.set(ttk.FALSE)
 
+
 def mostrar_lista_canciones():
     if button_var.get():
         button_var.set(ttk.FALSE)
@@ -180,10 +192,12 @@ def mostrar_lista_canciones():
         frame_canciones = ttk.Frame(window, padding=1, width=420, height=res[4], borderwidth=1, relief='solid',
                                     bootstyle='dark', name='float_frame')
         frame_canciones.propagate(0)
-        frame_canciones.place(relx=1.0, rely=1.0, x=-20, y=-70, anchor="se")
+        frame_canciones.place(relx=1.0, rely=1.0, x=-20, y=-100, anchor="se")
 
-        ttk.Label(frame_canciones, text="Lista de Reproducción", font='arial 16 bold', bootstyle='inverse-dark', name='label_lista_canciones').pack()
-        ttk.Label(frame_canciones, text=f'{add(time_var.get() // 60)}:{add(time_var.get() % 60)}', font='arial 16 bold', bootstyle='inverse-dark', name='tiempo').pack()
+        ttk.Label(frame_canciones, text="Lista de Reproducción", font='arial 16 bold', bootstyle='inverse-dark',
+                  name='label_lista_canciones').pack()
+        ttk.Label(frame_canciones, text=f'{add(time_var.get() // 60)}:{add(time_var.get() % 60)}', font='arial 16 bold',
+                  bootstyle='inverse-dark', name='tiempo').pack()
 
         sf_canciones = ScrolledFrame(frame_canciones, name='frame_scroll')
         sf_canciones.pack(fill=BOTH, expand=YES)
@@ -198,28 +212,27 @@ def update_queue():
         for child in sf_widget.winfo_children():
             child.destroy()
 
-
         songs_data = dll.display()
         for it, song_data in enumerate(songs_data):
             if it == 0:
                 song_frame = ttk.Frame(sf_widget, name=f'song{it}')
-                number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14', bootstyle='success')
-                number.pack(side='left', padx=(20, 10))
+                num = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14',
+                                   bootstyle='success')
+                num.pack(side='left', padx=(20, 10))
 
-                title = ttk.Label(song_frame, text=f'{song_data[1]["title"]}', width=45, font='14', bootstyle='success')
-                title.pack(side='left', padx=15)
+                lbl_title = ttk.Label(song_frame, text=f'{song_data[1]["title"]}', width=45, font='14', bootstyle='success')
+                lbl_title.pack(side='left', padx=15)
                 song_frame.pack(ipady=20, anchor='w', fill='x')
 
                 ttk.Separator(sf_widget).pack(anchor='w', fill='x')
             else:
                 song_frame = ttk.Frame(sf_widget, name=f'song{it}')
-                number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14')
-                number.pack(side='left', padx=(20, 10))
+                num = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14')
+                num.pack(side='left', padx=(20, 10))
 
-                title = ttk.Label(song_frame, text=f'{song_data[1]["title"]}', width=45, font='14')
-                title.pack(side='left', padx=15)
+                lbl_title = ttk.Label(song_frame, text=f'{song_data[1]["title"]}', width=45, font='14')
+                lbl_title.pack(side='left', padx=15)
                 song_frame.pack(ipady=20, anchor='w', fill='x')
-
 
 
 def time_limit():
@@ -227,19 +240,35 @@ def time_limit():
         sf_widget = window.nametowidget('.float_frame.!frame.frame_scroll')
 
         error_frame = ttk.Frame(sf_widget, name='error_frame')
-        title = ttk.Label(error_frame, text='Tiempo limite alcanzado: maximo 15 minutos', width=45, font='20', bootstyle='danger')
-        title.pack(side='left', padx=15)
+        lbl_title = ttk.Label(error_frame, text='Tiempo limite alcanzado: maximo 15 minutos', width=45, font='20', bootstyle='danger')
+        lbl_title.pack(side='left', padx=15)
         error_frame.pack(ipady=20, anchor='w', fill='x')
+
+
+def pause_song():
+    if not pause_var.get():
+        pause_var.set(ttk.TRUE)
+        btn = window.nametowidget('.bottom_frame.controls.pause_button')
+        btn['image'] = unpaused_image
+    else:
+        pause_var.set(ttk.FALSE)
+        btn = window.nametowidget('.bottom_frame.controls.pause_button')
+        btn['image'] = paused_image
+
+
+def set_volume(value):
+    pg.mixer_music.set_volume(float(value))
 
 
 bottom_frame = ttk.Frame(window, bootstyle='dark', name='bottom_frame')
 bottom_frame.pack(side='bottom', fill='x')
 bottom_frame.config(height=90)
+bottom_frame.propagate(0)
 
 button_var = ttk.BooleanVar()
 boton_mostrar_canciones = ttk.Button(bottom_frame, image=queue_image, command=mostrar_lista_canciones,
                                      textvariable=button_var, bootstyle='secondary')
-boton_mostrar_canciones.pack(side='right', padx=10, pady=10)
+boton_mostrar_canciones.pack(side='right', padx=30)
 
 cover_image = ttk.Label(bottom_frame, image=None, name='cover_image', bootstyle='inverse-dark')
 cover_image.pack(side='left', padx=(45, 15))
@@ -251,10 +280,24 @@ author = ttk.Label(song_data_frame, font='8', name='author', bootstyle='inverse-
 author.pack()
 song_data_frame.pack(side='left', padx=25)
 
-ttk.Checkbutton(bottom_frame, bootstyle="dark-toolbutton", text='Desactivar limite de tiempo', command=disable_time_limit).pack(side='right')
+ttk.Checkbutton(bottom_frame, bootstyle="dark-toolbutton", text='Desactivar limite de tiempo',
+                command=disable_time_limit).pack(side='right')
 
-controls_frame = ttk.Frame(bottom_frame, bootstyle='secondary', height=30, width=600).pack(pady=15)
+volume_slider = ttk.Scale(bottom_frame, to=1, orient="horizontal", name='volume', command=set_volume, bootstyle='dark')
+volume_slider.set(1)
+volume_slider.pack(side='right', padx=25)
 
+controls_frame = ttk.Frame(bottom_frame, bootstyle='dark', height=90, width=600, name='controls')
+controls_frame.pack()
+controls_frame.propagate(0)
+
+pause_var = ttk.BooleanVar()
+pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var,
+                   bootstyle='dark', name='pause_button')
+pause.pack()
+
+progress_bar = ttk.Progressbar(controls_frame, variable=progress_var, orient='horizontal', length=600, mode='determinate')
+progress_bar.pack(pady=10)
 
 # run
 window.mainloop()
