@@ -85,8 +85,8 @@ def is_playing(pause=False):
 
 def play():
     song: tuple[str, dict, PIL.Image.Image] = dll.get()
-    window.nametowidget('bottom_frame.song_data_frame.title')['text'] = song[1]['title']
-    window.nametowidget('bottom_frame.song_data_frame.author')['text'] = song[1]['artist']
+    window.nametowidget('bottom_frame.song_data_frame.title').configure(text=song[1]['title'], bootstyle='default')
+    window.nametowidget('bottom_frame.song_data_frame.author').configure(text=song[1]['artist'], bootstyle='light')
     window.nametowidget('bottom_frame.cover_image')['image'] = song[2]
     pg.mixer_music.load(song[0])
     pg.mixer_music.play(1)
@@ -260,25 +260,16 @@ def set_volume(value):
     pg.mixer_music.set_volume(float(value))
 
 
-bottom_frame = ttk.Frame(window, bootstyle='dark', name='bottom_frame')
+bottom_frame = ttk.Frame(window, name='bottom_frame', borderwidth=1, relief='solid')
 bottom_frame.pack(side='bottom', fill='x')
 bottom_frame.config(height=90)
 bottom_frame.propagate(0)
 
+# right buttons, controls
 button_var = ttk.BooleanVar()
 boton_mostrar_canciones = ttk.Button(bottom_frame, image=queue_image, command=mostrar_lista_canciones,
                                      textvariable=button_var, bootstyle='secondary')
 boton_mostrar_canciones.pack(side='right', padx=30)
-
-cover_image = ttk.Label(bottom_frame, image=None, name='cover_image', bootstyle='inverse-dark')
-cover_image.pack(side='left', padx=(45, 15))
-
-song_data_frame = ttk.Frame(bottom_frame, bootstyle='dark', name='song_data_frame')
-title = ttk.Label(song_data_frame, font='14', name='title', bootstyle='inverse-dark')
-title.pack()
-author = ttk.Label(song_data_frame, font='8', name='author', bootstyle='inverse-dark')
-author.pack()
-song_data_frame.pack(side='left', padx=25)
 
 ttk.Checkbutton(bottom_frame, bootstyle="dark-toolbutton", text='Desactivar limite de tiempo',
                 command=disable_time_limit).pack(side='right')
@@ -287,17 +278,32 @@ volume_slider = ttk.Scale(bottom_frame, to=1, orient="horizontal", name='volume'
 volume_slider.set(1)
 volume_slider.pack(side='right', padx=25)
 
-controls_frame = ttk.Frame(bottom_frame, bootstyle='dark', height=90, width=600, name='controls')
-controls_frame.pack()
-controls_frame.propagate(0)
+# left buttons, data
+cover_image = ttk.Label(bottom_frame, image=None, name='cover_image')
+cover_image.pack(side='left', padx=(45, 15))
+
+song_data_frame = ttk.Frame(bottom_frame, name='song_data_frame')
+
+title = ttk.Label(song_data_frame, font='14', name='title')
+title.pack()
+
+author = ttk.Label(song_data_frame, font='10', name='author')
+author.pack()
+
+song_data_frame.pack(side='left', padx=25)
+
+# mid controls
+controls_frame = ttk.Frame(bottom_frame, height=80, width=600, name='controls')
 
 pause_var = ttk.BooleanVar()
-pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var,
-                   bootstyle='dark', name='pause_button')
+pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var, name='pause_button', bootstyle='dark-link')
 pause.pack()
 
 progress_bar = ttk.Progressbar(controls_frame, variable=progress_var, orient='horizontal', length=600, mode='determinate')
 progress_bar.pack(pady=10)
+
+controls_frame.pack(pady=5)
+controls_frame.propagate(0)
 
 # run
 window.mainloop()
