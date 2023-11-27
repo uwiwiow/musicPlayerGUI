@@ -15,7 +15,7 @@ window = ttk.Window(themename='darkly')
 window.title("Kilq Music Player")
 window.geometry('1600x900')
 window.iconbitmap('assets/icon.ico')
-# window.state('zoomed')
+window.state('zoomed')
 
 # pg
 pg.mixer.init()
@@ -65,6 +65,19 @@ def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
     play()
 
 
+def is_playing():
+    if not pg.mixer_music.get_busy():
+        dll.pop()
+        if dll.get() is not None:
+            time_var.set(time_var.get() - dll.get()[1]['duration'])
+            play()
+        songs_var.set(dll.display(wdata='dict'))
+        update_queue()
+    else:
+        window.after(100, is_playing)
+
+
+
 # TODO si termina la barra de reproduccion hacer el pop y update
 def play():
     song: tuple[str, dict, PIL.Image.Image] = dll.get()
@@ -78,19 +91,20 @@ def play():
     # dll.pop()  # TODO al agregar a queue (funcion abajo) o hacer play hacer que se actualice el frame de queue
     # TODO no hacer pop si no hasta que acabe la cancion actual
     # TODO ver si al hacer play de una nueva cancion no se pierde el queue en pg (igual de repente ya no uso pg para esto)
+    is_playing()
+    # TODO quitar el var y en update_queue() hacer la llamada de los datos ddl.display tambien quitar el ast
     songs_var.set(dll.display(wdata='dict'))
     update_queue()
 
 
 def add_to_queue(song_data: tuple[str, dict, PIL.Image.Image]):
-    if (time_var.get() + song_data[1]['duration']) <= 900 or disable_time.get():
-        time_var.set(time_var.get() + song_data[1]['duration'])
-        dll.append(song_data)
-        songs_var.set(dll.display(wdata='dict'))
-        pg.mixer_music.queue(song_data[0])
-        update_queue()
-        if not pg.mixer_music.get_busy():
-            time_var.set(time_var.get() - song_data[1]['duration'])
+    if (time_var.get() + song_data[1]['duration']) <= 900 or disable_time.get():  # check if total time in queue is less than 15 min or queue max time is disabled
+        time_var.set(time_var.get() + song_data[1]['duration'])  # add song duration for queue list
+        dll.append(song_data)  # add song to node
+        songs_var.set(dll.display(wdata='dict'))  # get all songs data for queue list
+        update_queue()  # updates queue frame
+        if not pg.mixer_music.get_busy():  # plays music if there's no music already playing
+            time_var.set(time_var.get() - song_data[1]['duration'])  # reduces the time duration of the variable for the queue list
             play()
     else:
         time_limit()
@@ -115,6 +129,8 @@ sf.pack(fill=BOTH, expand=YES)
 
 # double linked list st
 dll = DLL()
+
+# vars
 songs_var = ttk.StringVar()
 songs_var.set(dll.display(wdata='dict'))
 time_var = ttk.IntVar()
@@ -250,6 +266,8 @@ author.pack()
 song_data_frame.pack(side='left', padx=25)
 
 ttk.Checkbutton(bottom_frame, bootstyle="dark-toolbutton", text='Desactivar limite de tiempo', command=disable_time_limit).pack(side='right')
+
+controls_frame = ttk.Frame(bottom_frame, bootstyle='secondary', height=30, width=600).pack(pady=15)
 
 
 # run
