@@ -59,6 +59,8 @@ def open_img(file_path):
 
 
 def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
+    if pg.mixer_music.get_busy():
+        dll.pop()
     dll.push(song_data)
     play()
 
@@ -66,17 +68,22 @@ def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
 # TODO si termina la barra de reproduccion hacer el pop y update
 def play():
     song: tuple[str, dict, PIL.Image.Image] = dll.get()
+    window.nametowidget('bottom_frame.song_data_frame.title')['text'] = song[1]['title']
+    window.nametowidget('bottom_frame.song_data_frame.author')['text'] = song[1]['artist']
+    window.nametowidget('bottom_frame.cover_image')['image'] = song[2]
     pg.mixer_music.load(song[0])
     pg.mixer_music.play(1)  # TODO buscar algo que siempre se este actualizando que verifique si paso o esta reproduciendo la siguiente cancion
     # TODO o sino en lugar de hacer pg.mixer_music.queue(song_data[0]) , no hacer queue y cada que verifique que se termino una cancion volver a llamar play()
     # TODO si empezo la siguiente cancion de la lista quitar su tiempo de el maximo y quitar el error, probablemente se quite solo con el update_queue()
-    dll.pop()  # TODO al agregar a queue (funcion abajo) o hacer play hacer que se actualice el frame de queue
+    # dll.pop()  # TODO al agregar a queue (funcion abajo) o hacer play hacer que se actualice el frame de queue
+    # TODO no hacer pop si no hasta que acabe la cancion actual
+    # TODO ver si al hacer play de una nueva cancion no se pierde el queue en pg (igual de repente ya no uso pg para esto)
     songs_var.set(dll.display(wdata='dict'))
     update_queue()
 
 
 def add_to_queue(song_data: tuple[str, dict, PIL.Image.Image]):
-    if (time_var.get() + song_data[1]['duration']) <= 900:
+    if (time_var.get() + song_data[1]['duration']) <= 900 or disable_time.get():
         time_var.set(time_var.get() + song_data[1]['duration'])
         dll.append(song_data)
         songs_var.set(dll.display(wdata='dict'))
@@ -104,7 +111,6 @@ res: list[int] = hd if window.winfo_width() < 1880 else fhd
 
 # main frame with scroller
 sf = ScrolledFrame(window, name='main_sf')
-sf.hide_scrollbars()
 sf.pack(fill=BOTH, expand=YES)
 
 # double linked list st
@@ -112,6 +118,7 @@ dll = DLL()
 songs_var = ttk.StringVar()
 songs_var.set(dll.display(wdata='dict'))
 time_var = ttk.IntVar()
+disable_time = ttk.BooleanVar()
 
 for i, v in enumerate(music):
     frame = ttk.Frame(sf, name=f'song{i}')  # individual frame for each song
@@ -153,6 +160,12 @@ for i, v in enumerate(music):
     frame.bind("<Leave>", on_leave)
 
 
+def disable_time_limit():
+    if not disable_time.get():
+        disable_time.set(ttk.TRUE)
+    else:
+        disable_time.set(ttk.FALSE)
+
 def mostrar_lista_canciones():
     if button_var.get():
         button_var.set(ttk.FALSE)
@@ -165,11 +178,10 @@ def mostrar_lista_canciones():
         frame_canciones.propagate(0)
         frame_canciones.place(relx=1.0, rely=1.0, x=-20, y=-70, anchor="se")
 
-        ttk.Label(frame_canciones, text="Lista de Canciones", font='arial 16 bold', bootstyle='inverse-dark', name='label_lista_canciones').pack()
+        ttk.Label(frame_canciones, text="Lista de Reproducción", font='arial 16 bold', bootstyle='inverse-dark', name='label_lista_canciones').pack()
         ttk.Label(frame_canciones, text=f'{add(time_var.get() // 60)}:{add(time_var.get() % 60)}', font='arial 16 bold', bootstyle='inverse-dark', name='tiempo').pack()
 
         sf_canciones = ScrolledFrame(frame_canciones, name='frame_scroll')
-        sf_canciones.hide_scrollbars()
         sf_canciones.pack(fill=BOTH, expand=YES)
 
         update_queue()
@@ -186,13 +198,24 @@ def update_queue():
             songs = [ast.literal_eval(song) for song in ast.literal_eval(songs_var.get())]
 
             for it, song_data in enumerate(songs):
-                song_frame = ttk.Frame(sf_widget, name=f'song{it}')
-                number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14')
-                number.pack(side='left', padx=(20, 10))
+                if it == 0:
+                    song_frame = ttk.Frame(sf_widget, name=f'song{it}')
+                    number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14', bootstyle='success')
+                    number.pack(side='left', padx=(20, 10))
 
-                title = ttk.Label(song_frame, text=f'{song_data["title"]}', width=45, font='14')
-                title.pack(side='left', padx=15)
-                song_frame.pack(ipady=20, anchor='w', fill='x')
+                    title = ttk.Label(song_frame, text=f'{song_data["title"]}', width=45, font='14', bootstyle='success')
+                    title.pack(side='left', padx=15)
+                    song_frame.pack(ipady=20, anchor='w', fill='x')
+
+                    ttk.Separator(sf_widget).pack(anchor='w', fill='x')
+                else:
+                    song_frame = ttk.Frame(sf_widget, name=f'song{it}')
+                    number = ttk.Label(song_frame, text=f'{it + 1}', width=3, image=None, name=str(it), font='14')
+                    number.pack(side='left', padx=(20, 10))
+
+                    title = ttk.Label(song_frame, text=f'{song_data["title"]}', width=45, font='14')
+                    title.pack(side='left', padx=15)
+                    song_frame.pack(ipady=20, anchor='w', fill='x')
         except SyntaxError:
             ...
 
@@ -215,6 +238,19 @@ button_var = ttk.BooleanVar()
 boton_mostrar_canciones = ttk.Button(bottom_frame, image=queue_image, command=mostrar_lista_canciones,
                                      textvariable=button_var, bootstyle='secondary')
 boton_mostrar_canciones.pack(side='right', padx=10, pady=10)
+
+cover_image = ttk.Label(bottom_frame, image=None, name='cover_image', bootstyle='inverse-dark')
+cover_image.pack(side='left', padx=(45, 15))
+
+song_data_frame = ttk.Frame(bottom_frame, bootstyle='dark', name='song_data_frame')
+title = ttk.Label(song_data_frame, font='14', name='title', bootstyle='inverse-dark')
+title.pack()
+author = ttk.Label(song_data_frame, font='8', name='author', bootstyle='inverse-dark')
+author.pack()
+song_data_frame.pack(side='left', padx=25)
+
+ttk.Checkbutton(bottom_frame, bootstyle="dark-toolbutton", text='Desactivar limite de tiempo', command=disable_time_limit).pack(side='right')
+
 
 # run
 window.mainloop()
