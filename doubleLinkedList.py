@@ -264,5 +264,6 @@ class DLL:
         new_node.prev = None
         if self.head is not None:
             self.head.prev = new_node
+        if self.head is None:
+            self.foot = new_node
         self.head = new_node
-        self.foot = new_node

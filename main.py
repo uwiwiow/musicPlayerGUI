@@ -14,6 +14,24 @@ window.geometry('1600x900')
 window.iconbitmap('assets/icon.ico')
 window.state('zoomed')
 
+loading_root = ttk.Toplevel(topmost=True)
+loading_root.overrideredirect(True)
+
+bg_image = ttk.PhotoImage(file='assets/bg.png')
+background_label = ttk.Label(loading_root, image=bg_image)
+background_label.place(relwidth=1, relheight=1)
+
+# Centrar la ventana de carga en el centro de la pantalla
+loading_root.withdraw()
+loading_root.update_idletasks()
+x = (loading_root.winfo_screenwidth() - 640) // 2
+y = (loading_root.winfo_screenheight() - 400) // 2
+loading_root.geometry("640x400+{}+{}".format(x, y))
+loading_root.deiconify()
+
+loading_root.update_idletasks()
+loading_root.after(6000, lambda: loading_root.destroy())
+
 # pg
 pg.mixer.init()
 music = Music().list_songs()
@@ -68,7 +86,6 @@ def load_song(song_data: tuple[str, dict, PIL.Image.Image]):
 
 def is_playing():
     if not pg.mixer_music.get_busy() and not pause_var.get():
-        print(pause_var.get())
         progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
         dll.pop()
         if dll.get() is not None:
@@ -79,11 +96,9 @@ def is_playing():
         update_queue()
     else:
         if not pause_var.get():
-            pg.mixer_music.unpause()
             progress_var.set(progress_var.get() + ((0.1 * 100) / dll.get()[1]['duration']))
             window.after(100, is_playing)
         if pause_var.get():
-            pg.mixer_music.pause()
             window.after(100, is_playing)
 
 
@@ -252,9 +267,11 @@ def time_limit():
 def pause_song():
     if not pause_var.get():
         pause_var.set(ttk.TRUE)
+        pg.mixer_music.pause()
         btn = window.nametowidget('.bottom_frame.controls.pause_button')
         btn['image'] = unpaused_image
     else:
+        pg.mixer_music.unpause()
         pause_var.set(ttk.FALSE)
         btn = window.nametowidget('.bottom_frame.controls.pause_button')
         btn['image'] = paused_image
@@ -300,8 +317,8 @@ song_data_frame.pack(side='left', padx=25)
 controls_frame = ttk.Frame(bottom_frame, height=80, width=600, name='controls')
 
 pause_var = ttk.BooleanVar()
-# pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var, name='pause_button', bootstyle='dark-link')
-# pause.pack()  TODO arreglar esto
+pause = ttk.Button(controls_frame, image=paused_image, command=pause_song, textvariable=pause_var, name='pause_button', bootstyle='dark-link')
+pause.pack()
 
 progress_bar = ttk.Progressbar(controls_frame, variable=progress_var, orient='horizontal', length=600, mode='determinate')
 progress_bar.pack(pady=10)
