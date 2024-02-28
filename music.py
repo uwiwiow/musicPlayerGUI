@@ -2,6 +2,8 @@ import io
 import os
 import pickle
 import hashlib
+
+import PIL
 from tinytag import TinyTag
 from PIL import Image, ImageTk
 
@@ -37,7 +39,17 @@ class Music:
             music_list = []
             for song in os.listdir(directory):
                 full_dir = directory + song
-                music_list.append((full_dir, TinyTag.get(full_dir).as_dict(), Image.open(io.BytesIO(TinyTag.get(full_dir, image=True).get_image()))))
+                try:
+                    song_data = ((full_dir, TinyTag.get(full_dir).as_dict(),
+                                       Image.open(io.BytesIO(TinyTag.get(full_dir, image=True).get_image()))))
+                    if song_data[1]["title"] is None:
+                        song_data[1]["title"] = song.strip('.mp3')
+                    music_list.append(song_data)
+                except PIL.UnidentifiedImageError:
+                    song_data = ((full_dir, TinyTag.get(full_dir).as_dict(), None))
+                    if song_data[1]["title"] is None:
+                        song_data[1]["title"] = song.strip('.mp3')
+                    music_list.append(song_data)
 
             data = {'hash_': hash_, 'music_list': music_list}
 
@@ -56,5 +68,9 @@ class Music:
             [f for f in os.listdir(dir_) if os.path.isfile(os.path.join(dir_, f))]).encode()).hexdigest()
 
     def __load_img(self, img: Image.Image, width: int = 45, height: int = 45):
-        res_img = img.resize((width, height), Image.LANCZOS)
+        try:
+            res_img = img.resize((width, height), Image.LANCZOS)
+        except AttributeError:
+            res_img = Image.open("assets/default.png")
+            res_img = res_img.resize((width, height), Image.LANCZOS)
         return ImageTk.PhotoImage(res_img)
